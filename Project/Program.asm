@@ -1,196 +1,156 @@
 INCLUDE Irvine32.inc
 
-swap MACRO loc1, loc2
-push eax
-push ebx
-push ecx
-push edx
+pushRegs MACRO
+    push eax
+    push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
+ENDM ;pushRegs
 
+popRegs MACRO
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+ENDM ;popRegs
+
+printReg MACRO reg
+push eax
+mov eax, reg
+call WriteDec
+printSpace
+pop eax
+ENDM ;printReg
+
+printString MACRO msg
+    push edx
+   mov edx, OFFSET msg
+   call WriteString
+   call Crlf
+   pop edx
+ENDM ;PrintString
+
+swap MACRO loc1, loc2
+pushRegs
 mov eax, loc1
 mov ebx, loc2
 mov ecx, [eax]
 mov edx, [ebx]
 mov [eax], edx
 mov [ebx], ecx
+popRegs
+ENDM ;swap
 
-pop edx
-pop ecx
-pop ebx
-pop eax
-    
-ENDM
-PrintString MACRO msg
-   mov edx, OFFSET msg
-   call WriteString
-   call Crlf
-ENDM
-
-PrintArray MACRO arrayName, arraySize
-   LOCAL index
-   mov esi, OFFSET arrayName
-   mov ecx, arraySize
-   Lp:
-      mov eax, [esi]
-      call WriteInt
-      add esi, 4
-      loop Lp
-   call Crlf
-ENDM
-
-moval  MACRO p1, val
+printSpace MACRO
     push eax
-    mov eax , val
-    mov [p1], eax
+    mov eax, ' '
+    call WriteChar
     pop eax
+ENDM ;printSpace
+
+printArray MACRO arr, arrSize
+pushRegs
+mov ecx, arrSize
+mov esi, arr
+mov edi, 0
+mov esi, OFFSET arr
+call printArrayLoopLabel
+popRegs
+ENDM ;printArray
+
+readArray MACRO arr, n, msg
+pushRegs
+    printString msg
+    mov ecx, n
+    mov edi, 0
+    readArrayLoop:
+     call readInt
+     mov arr[edi *4], eax
+     inc edi
+     loop readArrayLoop
+popRegs
 ENDM
 
-SortArray MACRO arrayName, arraySize
-    outerIndex DWORD ?
-     innerIndex DWORD ?
-     temp DWORD ?
-   mov ecx, arraySize
-   dec ecx
-   mov esi, OFFSET arrayName
-   moval outerIndex, 0
-   L1:
-        moval innerIndex, 0
-      L2:
-      push ebx
-         mov ebx, innerIndex
-         mov eax, [esi + ebx * 4]
-         inc ebx
-         cmp eax, [esi + (ebx) * 4]
-         pop ebx
-         jle L3
-         push ebx
-         mov ebx, innerIndex
-         mov eax, [esi + ebx * 4]
-         pop ebx
-          moval temp, eax
-;          mov temp, eax
-         push ebx
-         mov ebx, innerIndex
-         inc ebx
-         mov eax, [esi + (ebx) * 4]
-         dec ebx
-         mov [esi + ebx * 4], eax
-         pop ebx
-         mov eax, temp
-         push ebx
-         mov ebx, innerIndex
-         inc ebx
-         mov [esi + (ebx) * 4], eax
-         pop ebx
-      L3:
-         inc innerIndex
-         loop L2
-      inc outerIndex
-      loop L1
-ENDM
+sortArray MACRO arr, n
+pushRegs
+mov ecx, n
+dec ecx
+mov ebx, ecx
+mov esi, OFFSET arr
+call sortArrayLoops
+popRegs
+ENDM  ;sort array
+
 
 .data
     processCount DWORD 4               ; Number of processes
     listArrivalTimes DWORD 4 DUP(0)       ; Arrival times
     listBurstTimes DWORD 4 DUP(0)         ; Burst times
-    
-    ; completionTime DWORD 4 DUP(0)   
-    ; waitingTimes DWORD 4 DUP(0)         ; Array for waiting times
-    ; turnaroundTimes DWORD 4 DUP(0)      ; Array for turnaround times
-    ; totalWaitingTime DWORD 0            ; Total waiting time
-    ; totalTurnaroundTime DWORD 0
-     
-     count DWORD 0;         ; Total turnaround time
 
 
      msgInputArrivalTime byte "Enter the arrival times for process ", 0
      msgInputBurstTime byte "Enter the arrival times for process ", 0
 
-
-    ; msgProcess BYTE "Process ", 0
-    ; msgArrival BYTE "Arrival Time: ", 0
-    ; msgBurst BYTE "Burst Time: ", 0
-    ; msgWaiting BYTE "Waiting Time: ", 0
-    ; msgTurnaround BYTE "Turnaround Time: ", 0
-    ; msgTotalWaiting BYTE "Total Waiting Time: ", 0
-    ; msgTotalTurnaround BYTE "Total Turnaround Time: ", 0
     msgSpace BYTE " ", 0
-    arr DWORD 10,5,16,9       ; Arrival times
+    arr DWORD 10,5,16,1      ; Arrival times
 
 .code
 main PROC 
-    SortArray arr, 4
+    ;Take input from user
+    ; readArray listArrivalTimes, processCount, msgInputArrivalTime
+    ; printArray listArrivalTimes, processCount
 
-   PrintArray arr, 4
+    sortArray arr, processCount
+
+
+    ; printArray arr, processCount
+    printArray arr, processCount
+
+
     exit
 
-; Take input from user
-TakeInput proc 
-    ; input arrival times
-    push OFFSET msgInputArrivalTime
-    push OFFSET listArrivalTimes
-    call ReadArray
-    push OFFSET listArrivalTimes
-    call WriteArray
+sortArrayLoops PROC 
+    outerLoop:
+    push ecx
+    mov edi , ecx
+    dec edi
+    innerLoop:
+        mov eax, [esi + edi *4 ] ;esi[edi * 4] ;j
+        cmp eax ,[esi + ebx *4 ] ; esi[ebx * 4]
+        jng noSwap
+        ; printReg ebx
+        ; printReg edi
+        ; printSpace
+        ; swap
+        push ebx
+        lea eax, [esi + ebx *4 ];esi[ebx * 4]
+        lea ebx, [esi + edi *4 ];esi[edi * 4]
+        swap eax, ebx
+        pop ebx
 
-    ; input Burst times
-    push OFFSET msgInputBurstTime
-    push OFFSET listBurstTimes
-    call ReadArray
-    push OFFSET listBurstTimes
-    call WriteArray
-    ret
-TakeInput ENDP
-
-; Read array
-ReadArray PROC
-push ebp
-mov ebp, esp
-    mov esi, [ebp + 8]  
-    mov edx,  [ebp+12]
-     call WriteString
-
-    mov ecx, processCount
-    mov count, 0
-    L:
-     mov ebx,count
-     call readInt
-     mov [esi + ebx * 4], eax
-     inc count
-     loop L
-pop ebp
+        noSwap:
+        dec edi
+    loop innerLoop
+    dec ebx
+    call Crlf
+    pop ecx
+loop outerloop
 ret
-ReadArray ENDP
+sortArrayLoops ENDP
 
-; Write array
-WriteArray PROC
-push ebp
-mov ebp, esp
-    mov esi, [ebp + 8]    
-    mov ecx, processCount
-    mov count, 0
-         ; mov edx,  [ebp+8]
-     ; call WriteString
-    L:
-     mov ebx,count
-     mov eax ,[esi + ebx * 4]
-     call WriteDec
-     
-     mov edx, OFFSET msgSpace
-     call WriteString
-     inc count
-     loop L
-     call Crlf
-pop ebp
+printArrayLoopLabel PROC
+
+    loopLabel:
+    mov eax, [esi + edi * 4]
+    call WriteDec
+    printSpace
+    inc edi
+    loop loopLabel
 ret
-WriteArray ENDP
-
-
-
-_test PROC 
-   mov eax, 1
-   call WriteInt
-   ret
-_test ENDP
-
+printArrayLoopLabel ENDP
 main ENDP     
 END main
