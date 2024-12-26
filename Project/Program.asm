@@ -67,11 +67,8 @@ pushRegs
     printString msg
     mov ecx, n
     mov edi, 0
-    readArrayLoop:
-     call readInt
-     mov arr[edi *4], eax
-     inc edi
-     loop readArrayLoop
+    mov esi, OFFSET arr
+    call readArrayLoopLabel
 popRegs
 ENDM
 
@@ -101,17 +98,29 @@ ENDM  ;sort array
 .code
 main PROC 
     ;Take input from user
-    ; readArray listArrivalTimes, processCount, msgInputArrivalTime
-    ; printArray listArrivalTimes, processCount
+    readArray listArrivalTimes, processCount, msgInputArrivalTime
+    printArray listArrivalTimes, processCount
 
-    sortArray arr, processCount
+    readArray listBurstTimes, processCount, msgInputBurstTime
+    printArray listBurstTimes, processCount
 
+    sortArray listArrivalTimes, processCount
+    sortArray listBurstTimes, processCount
 
     ; printArray arr, processCount
-    printArray arr, processCount
-
+    printArray listArrivalTimes, processCount
+    call Crlf
+    printArray listBurstTimes, processCount
 
     exit
+readArrayLoopLabel PROC
+    readArrayLoop:
+     call readInt
+     mov [esi + edi*4], eax
+     inc edi
+     loop readArrayLoop
+ret
+readArrayLoopLabel ENDP
 
 sortArrayLoops PROC 
     outerLoop:
