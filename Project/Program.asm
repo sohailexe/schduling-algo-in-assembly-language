@@ -108,6 +108,26 @@ composeString MACRO processNumber , arrivalTime, burstTime
    call Crlf
     ; pop edx
 ENDM ;composeString
+          
+composeSimulationOutput MACRO pNo, pWaitingTime, pBurstTime
+   printString strProcess
+   printChar ':'
+   printReg pNo
+   printSpace
+   printString strLine
+   call Crlf
+   printString strSpaces
+   printString strWaitingTime
+   printChar ':'
+   printReg pWaitingTime
+   call Crlf
+   printString strSpaces
+   printString strExecuteTime
+   printChar ':'
+   printReg pBurstTime
+   call Crlf
+   call Crlf
+ENDM
 
 printArrayWithComposeString MACRO arr1, arr2, arr3, sizeOfArray,lebel
     pushRegs
@@ -121,8 +141,24 @@ lebel:
     popRegs
 ENDM
 
+
+simulateFCFS MACRO simArr1, simArr2, simArr3, simArNum
+    pushRegs
+    mov ecx, simArNum
+    mov edi, 0
+    mov eax, 0
+simulateFCFSLoopLabel:
+    composeSimulationOutput [simArr1 + edi * 4], eax, [simArr3 + edi * 4]
+    add eax, [simArr3 + edi * 4]
+    inc edi
+    dec ecx
+    jnz simulateFCFSLoopLabel
+    popRegs
+ENDM
+
 .data
-    processCount DWORD 4               ; Number of processes
+    processCount DWORD 4  
+    processOrder DWORD 1,2,3,4             ; Number of processes
     listArrivalTimes DWORD 4 DUP(0)       ; Arrival times
     listBurstTimes DWORD 4 DUP(0)         ; Burst times
 
@@ -134,19 +170,29 @@ ENDM
      strProcess byte "Process ",0
      strArrivalTime byte "Arrival-Time ",0
      strBurstTime byte "Burst-Time ",0
+     strWaitingTime byte "Waiting-Time ",0
+     strExecuteTime byte "Execute-Time ",0
+     strSpaces byte "              ",0
+     strLine byte "***************************",0
+
 
     msgSpace BYTE " ", 0
-    arr DWORD 10,5,16,1      ; Arrival times
-    processOrder DWORD 1,2,3,4
+    arr DWORD 10,5,5,1      ; Arrival times
 
 .code
 main PROC 
     call takeInput
-    call printBeforeAndAfterSorting
+    printArrayWithComposeString processOrder, listArrivalTimes ,listBurstTimes, processCount,leb12
+    sortArray listArrivalTimes, processCount, processOrder, listBurstTimes
+    call Crlf
+    printString msgAfterSorting
+    call Crlf
+    call Crlf
+    printArrayWithComposeString processOrder, listArrivalTimes ,listBurstTimes, processCount,leb01
 
-    ; printArray listArrivalTimes, processCount
-    ; printArray processOrder, processCount
-    ; printArray listBurstTimes, processCount
+    call Crlf
+    call Crlf
+    simulateFCFS processOrder,listArrivalTimes, listBurstTimes, processCount
 
 
     exit
