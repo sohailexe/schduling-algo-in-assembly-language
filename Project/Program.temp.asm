@@ -26,11 +26,19 @@ printSpace
 pop eax
 ENDM ;printReg
 
+
+printChar MACRO char
+push eax
+mov eax, char
+ call writeChar
+printSpace
+pop eax
+ENDM ;
 printString MACRO msg
     push edx
    mov edx, OFFSET msg
    call WriteString
-   call Crlf
+   
    pop edx
 ENDM ;PrintString
 
@@ -59,29 +67,59 @@ mov esi, arr
 mov edi, 0
 mov esi, OFFSET arr
 call printArrayLoopLabel
+    call Crlf
+
 popRegs
 ENDM ;printArray
 
 readArray MACRO arr, n, msg
-pushRegs
-    printString msg
-    mov ecx, n
-    mov edi, 0
-    mov esi, OFFSET arr
-    call readArrayLoopLabel
-popRegs
+    pushRegs
+        printString msg
+        mov ecx, n
+        mov edi, 0
+        mov esi, OFFSET arr
+        call readArrayLoopLabel
+    popRegs
 ENDM
 
-sortArray MACRO arr, n
+sortArray MACRO arr, n, processOrder, burstTimes
 pushRegs
 mov ecx, n
 dec ecx
 mov ebx, ecx
 mov esi, OFFSET arr
+push OFFSET burstTimes
+push OFFSET processOrder
 call sortArrayLoops
 popRegs
 ENDM  ;sort array
 
+
+composeString MACRO processNumber , arrivalTime, burstTime
+    ; push edx
+   printString strProcess
+   printReg processNumber
+   printChar '|'
+   printString strArrivalTime
+   printReg arrivalTime
+   printChar '|'
+   printString strBurstTime
+   printReg burstTime
+   call Crlf
+    ; pop edx
+ENDM ;composeString
+
+printArrayWithComposeString MACRO arr1, arr2, arr3, sizeOfArray,lebel
+    pushRegs
+    mov ecx, sizeOfArray
+    mov edi, 0
+lebel:
+    composeString [arr1 + edi * 4], [arr2 + edi * 4], [arr3 + edi * 4]
+    inc edi
+    dec ecx
+    jnz lebel
+    popRegs
+ENDM
 
 .data
     processCount DWORD 4               ; Number of processes
@@ -91,28 +129,49 @@ ENDM  ;sort array
 
      msgInputArrivalTime byte "Enter the arrival times for process ", 0
      msgInputBurstTime byte "Enter the arrival times for process ", 0
+     msgAfterSorting byte "*******AFTER SORTING WITH RESPECT TO ARRIVAL TIME******* ",0
+
+     strProcess byte "Process ",0
+     strArrivalTime byte "Arrival-Time ",0
+     strBurstTime byte "Burst-Time ",0
 
     msgSpace BYTE " ", 0
     arr DWORD 10,5,16,1      ; Arrival times
+    processOrder DWORD 1,2,3,4
 
 .code
 main PROC 
-    ;Take input from user
+    call takeInput
+    call printBeforeAndAfterSorting
+
+    ; printArray listArrivalTimes, processCount
+    ; printArray processOrder, processCount
+    ; printArray listBurstTimes, processCount
+
+
+    exit
+
+takeInput PROC
     readArray listArrivalTimes, processCount, msgInputArrivalTime
     printArray listArrivalTimes, processCount
 
     readArray listBurstTimes, processCount, msgInputBurstTime
     printArray listBurstTimes, processCount
 
-    sortArray listArrivalTimes, processCount
-    sortArray listBurstTimes, processCount
+    ret
+takeInput ENDP
 
-    ; printArray arr, processCount
-    printArray listArrivalTimes, processCount
+printBeforeAndAfterSorting proc
+    printArrayWithComposeString processOrder, listArrivalTimes ,listBurstTimes, processCount,leb12
+    sortArray listArrivalTimes, processCount, processOrder, listBurstTimes
     call Crlf
-    printArray listBurstTimes, processCount
+    printString msgAfterSorting
+    call Crlf
+    call Crlf
+    printArrayWithComposeString processOrder, listArrivalTimes ,listBurstTimes, processCount,leb01
+ret
+printBeforeAndAfterSorting endp
 
-    exit
 readArrayLoopLabel PROC
     readArrayLoop:
      call readInt
@@ -123,32 +182,58 @@ ret
 readArrayLoopLabel ENDP
 
 sortArrayLoops PROC 
+    push ebp
+    mov ebp, esp
+
     outerLoop:
     push ecx
-    mov edi , ecx
+    mov edi, ecx
     dec edi
+
     innerLoop:
-        mov eax, [esi + edi *4 ] ;esi[edi * 4] ;j
-        cmp eax ,[esi + ebx *4 ] ; esi[ebx * 4]
+        mov eax, [esi + edi * 4] ; esi[edi * 4] ; j
+        cmp eax, [esi + ebx * 4] ; esi[ebx * 4]
         jng noSwap
-        ; printReg ebx
-        ; printReg edi
-        ; printSpace
-        ; swap
+
+        ; Swap
         push ebx
-        lea eax, [esi + ebx *4 ];esi[ebx * 4]
-        lea ebx, [esi + edi *4 ];esi[edi * 4]
+        lea eax, [esi + ebx * 4] ; esi[ebx * 4]
+        lea ebx, [esi + edi * 4] ; esi[edi * 4]
         swap eax, ebx
         pop ebx
 
-        noSwap:
+        ; Process order
+        push esi
+        push ebx
+        mov esi, [ebp + 8]
+        lea eax, [esi + ebx * 4] ; esi[ebx * 4]
+        lea ebx, [esi + edi * 4] ; esi[edi * 4]
+        swap eax, ebx
+        pop ebx
+        pop esi
+
+        ; Burst times
+        push esi
+        push ebx
+        mov esi, [ebp + 12]
+        lea eax, [esi + ebx * 4] ; esi[ebx * 4]
+        lea ebx, [esi + edi * 4] ; esi[edi * 4]
+        swap eax, ebx
+        pop ebx
+        pop esi
+
+    noSwap:
         dec edi
-    loop innerLoop
+        dec ecx
+        jnz innerLoop
+
     dec ebx
-    call Crlf
     pop ecx
-loop outerloop
-ret
+    dec ecx
+    jnz outerLoop
+
+    pop ebp
+    ret
 sortArrayLoops ENDP
 
 printArrayLoopLabel PROC
